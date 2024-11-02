@@ -2,17 +2,17 @@
 
 **Important:** It is currently a list and not a starter pack, as this has not yet been implemented in the offcial api. This will be added as soon as it is available. However, the functionality of the list will remain the same. The list is available here: https://bsky.app/profile/jonathanschndr.de/lists/3l7ykssg2522z
 
-A Nitro-powered server that generates and maintains a curated starter pack of the top 150 tech influencers from @antfu.me's Bluesky network. The server analyzes and ranks users based on follower counts, posting frequency, and engagement rates.
+A Nitro-powered server that analyzes @antfu.me's Bluesky network to rank and curate the top 150 tech voices based on engagement metrics. The system provides both an API endpoint and an automatically updated Bluesky list.
 
 ## 🌟 Features
 
-- **Automated Curation**: Identifies top 150 tech voices from @antfu.me's following list
 - **Smart Ranking System**:
-  - Follower count (40% weight)
-  - Posting frequency (35% weight)
-  - Engagement rates (25% weight)
+  - Follower Score (40% weight)
+  - Posts Score (35% weight)
+  - Interactions Score (25% weight)
 - **Daily Updates**: Automatic refresh at 2 AM UTC
-- **REST API**: Simple access to current starter pack
+- **REST API**: Simple access to current rankings
+- **Bluesky List**: Auto-updated curated list
 - **TypeScript**: Fully typed for better developer experience
 
 ## 📋 Technical Requirements
@@ -21,11 +21,29 @@ A Nitro-powered server that generates and maintains a curated starter pack of th
 - npm or yarn
 - A Bluesky account for API access
 
+## 🔌 Live Access Points
+
+- **API Endpoint**: [https://bluesky-starter-pack-antfume-production.up.railway.app/api/starter-pack](https://bluesky-starter-pack-antfume-production.up.railway.app/api/starter-pack)
+- **Bluesky List**: [https://bsky.app/profile/jonathanschndr.de/lists/3l7ykssg2522z](https://bsky.app/profile/jonathanschndr.de/lists/3l7ykssg2522z)
+
+## 📁 Project Structure
+
+```
+bluesky-starter-pack-antfu.me/
+├── api/
+│   └── starter-pack.ts      # API route & main logic
+├── nitro.config.ts          # Nitro base configuration
+├── .env                     # Environment variables
+├── .gitignore              # Git ignore rules
+├── package.json            # Project dependencies
+└── README.md               # Documentation
+```
+
 ## 🚀 Installation & Setup
 
 1. **Clone repository**
    ```bash
-   git clone https://github.com/username/bluesky-starter-pack-antfu.me.git
+   git clone https://github.com/JonathanSchndr/bluesky-starter-pack-antfu.me.git
    cd bluesky-starter-pack-antfu.me
    ```
 
@@ -53,66 +71,10 @@ A Nitro-powered server that generates and maintains a curated starter pack of th
    npm start
    ```
 
-## 📁 Project Structure
-
-```
-bluesky-starter-pack-antfu.me/
-├── api/
-│   └── starter-pack.ts      # API route & main logic
-├── nitro.config.ts          # Nitro base configuration
-├── .env                     # Environment variables
-├── .gitignore              # Git ignore rules
-├── package.json            # Project dependencies
-└── README.md               # Documentation
-```
-
-## 🔌 API Usage & Testing
+## 🔌 API Response Format
 
 ### GET /api/starter-pack
 
-Retrieves the current starter pack.
-
-#### Using curl
-```bash
-curl http://localhost:3000/api/starter-pack
-```
-
-#### Using JavaScript/TypeScript
-```typescript
-// Using fetch
-async function getStarterPack() {
-  try {
-    const response = await fetch('http://localhost:3000/api/starter-pack')
-    const data = await response.json()
-    console.log(data)
-  } catch (error) {
-    console.error('Error:', error)
-  }
-}
-
-// Using axios
-import axios from 'axios'
-
-async function getStarterPack() {
-  try {
-    const response = await axios.get('http://localhost:3000/api/starter-pack')
-    console.log(response.data)
-  } catch (error) {
-    console.error('Error:', error)
-  }
-}
-```
-
-#### Using Python
-```python
-import requests
-
-response = requests.get('http://localhost:3000/api/starter-pack')
-data = response.json()
-print(data)
-```
-
-#### Response Format
 ```json
 {
   "success": true,
@@ -128,30 +90,36 @@ print(data)
         "followers": 1000,
         "following": 500,
         "postsCount": 1200,
-        "postsPerDay": 3.5,
-        "avgInteractions": 25.7,
+        "followerScore": 30.10,
+        "postsScore": 45.50,
+        "interactionsScore": 28.70,
         "lastActive": "2024-11-01T12:00:00.000Z",
-        "activityScore": 85.4
+        "score": 35.24
       }
     ]
   }
 }
 ```
 
-### Troubleshooting API Access
+## 🔢 Scoring System
 
-If you encounter a 404 error, verify:
+The ranking system uses three main components:
 
-1. Server is running (`npm run dev` or `npm start`)
-2. Correct file structure as shown above
-3. Port configuration in `.env` matches your request
-4. No cached builds (try cleaning and rebuilding):
-   ```bash
-   rm -rf .output
-   rm -rf node_modules
-   npm install
-   npm run dev
-   ```
+1. **Follower Score (40%)**
+   - Logarithmic scaling of follower count
+   - `Math.log10(followers + 1) * 10`
+
+2. **Posts Score (35%)**
+   - Based on posting frequency
+   - Limited to realistic maximum
+   - `postsPerDay * 10`
+
+3. **Interactions Score (25%)**
+   - Average engagements per post
+   - Includes likes, reposts, and replies
+   - `Math.log10(avgInteractions + 1) * 10`
+
+Final score is weighted average of these components, scaled 0-100.
 
 ## 🔧 Development Commands
 
@@ -211,13 +179,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [@antfu](https://github.com/antfu) for the amazing tech community
 - [Bluesky](https://bsky.app) for the API
 - [Nitro](https://nitro.unjs.io/) for the server framework
+- [Railway](https://railway.app) for hosting
 
 ## 💬 Support
 
 For questions or issues:
 1. Check existing issues in the repository
 2. Open a new issue with detailed description
-3. Contact the development team
+3. Contact via Bluesky: [@jonathanschndr.de](https://bsky.app/profile/jonathanschndr.de)
 
 ---
 

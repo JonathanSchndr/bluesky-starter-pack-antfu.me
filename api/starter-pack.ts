@@ -10,10 +10,11 @@ interface UserMetrics {
   followers: number
   following: number
   postsCount: number
-  postsPerDay: number
-  avgInteractions: number
+  followerScore: number
+  postsScore: number
+  interactionsScore: number
   lastActive: string
-  activityScore?: number
+  score?: number
 }
 
 interface StarterPack {
@@ -105,6 +106,84 @@ async function fetchAllFollows(handle: string): Promise<Set<string>> {
   }
 }
 
+function calculatePostsPerDay(postDates: Date[]): number {
+  try {
+    if (postDates.length === 0) return 0
+    if (postDates.length === 1) return 1
+
+    // Sort dates newest to oldest
+    const sortedDates = [...postDates].sort((a, b) => b.getTime() - a.getTime())
+
+    // Calculate time range in days between newest and oldest post
+    const newestDate = sortedDates[0]
+    const oldestDate = sortedDates[sortedDates.length - 1]
+    const daysDiff = Math.max(
+      1,
+      (newestDate.getTime() - oldestDate.getTime()) / (1000 * 60 * 60 * 24)
+    )
+
+    // Calculate average posts per day
+    const postsPerDay = Math.min(50, postDates.length / daysDiff)
+
+    // Round to 2 decimal places
+    return Math.round(postsPerDay * 100) / 100
+  } catch (error) {
+    console.error('Error calculating posts per day:', error)
+    return 0
+  }
+}
+
+function calculateAverageInteractions(feed: any[]): number {
+  try {
+    const interactions = feed.map(item => {
+      const likes = Number(item.post.likeCount) || 0
+      const reposts = Number(item.post.repostCount) || 0
+      const replies = Number(item.post.replyCount) || 0
+      return likes + reposts + replies
+    })
+
+    return interactions.length > 0
+      ? Math.round((interactions.reduce((a, b) => a + b, 0) / interactions.length) * 100) / 100
+      : 0
+  } catch {
+    return 0
+  }
+}
+
+function calculateScores(user: {
+  followers: number,
+  postsPerDay: number,
+  avgInteractions: number
+}): {
+  followerScore: number,
+  postsScore: number,
+  interactionsScore: number,
+  score: number
+} {
+  // Calculate individual scores on a scale of 0-100
+  const followerScore = Math.round(Math.log10(user.followers + 1) * 10 * 100) / 100
+  const postsScore = Math.round(user.postsPerDay * 10 * 100) / 100
+  const interactionsScore = Math.round(Math.log10(user.avgInteractions + 1) * 10 * 100) / 100
+
+  // Calculate final score with weights
+  const followerWeight = 0.4
+  const postsWeight = 0.35
+  const interactionsWeight = 0.25
+
+  const score = Math.round(
+    (followerScore * followerWeight +
+    postsScore * postsWeight +
+    interactionsScore * interactionsWeight) * 100
+  ) / 100
+
+  return {
+    followerScore,
+    postsScore,
+    interactionsScore,
+    score
+  }
+}
+
 async function analyzeUser(handle: string): Promise<UserMetrics | null> {
   if (!agent) throw new Error('Agent not initialized')
 
@@ -135,10 +214,15 @@ async function analyzeUser(handle: string): Promise<UserMetrics | null> {
       .filter((date): date is Date => date !== null)
 
     const defaultDate = new Date().toISOString()
-
     const postsPerDay = calculatePostsPerDay(postDates)
     const avgInteractions = calculateAverageInteractions(posts.data.feed)
-    const lastActive = postDates.length > 0 ? postDates[0].toISOString() : defaultDate
+
+    // Calculate scores
+    const scores = calculateScores({
+      followers: profile.data.followersCount ?? 0,
+      postsPerDay,
+      avgInteractions
+    })
 
     return {
       handle: profile.data.handle,
@@ -147,61 +231,16 @@ async function analyzeUser(handle: string): Promise<UserMetrics | null> {
       followers: profile.data.followersCount || 0,
       following: profile.data.followsCount || 0,
       postsCount: profile.data.postsCount || 0,
-      postsPerDay,
-      avgInteractions,
-      lastActive
+      followerScore: scores.followerScore,
+      postsScore: scores.postsScore,
+      interactionsScore: scores.interactionsScore,
+      lastActive: postDates.length > 0 ? postDates[0].toISOString() : defaultDate,
+      score: scores.score
     }
   } catch (error) {
     console.error(`Error analyzing user ${handle}:`, error)
     return null
   }
-}
-
-function calculateAverageInteractions(feed: any[]): number {
-  try {
-    const interactions = feed.map(item => {
-      const likes = Number(item.post.likeCount) || 0
-      const reposts = Number(item.post.repostCount) || 0
-      const replies = Number(item.post.replyCount) || 0
-      return likes + reposts + replies
-    })
-
-    return interactions.length > 0
-      ? interactions.reduce((a, b) => a + b, 0) / interactions.length
-      : 0
-  } catch {
-    return 0
-  }
-}
-
-function calculatePostsPerDay(postDates: Date[]): number {
-  try {
-    if (postDates.length < 2) return postDates.length
-
-    const latestDate = postDates[0].getTime()
-    const oldestDate = postDates[postDates.length - 1].getTime()
-    const daysDiff = (latestDate - oldestDate) / (1000 * 60 * 60 * 24)
-
-    return daysDiff > 0 ? postDates.length / daysDiff : postDates.length
-  } catch {
-    return 0
-  }
-}
-
-function calculateActivityScore(user: UserMetrics): number {
-  const followerWeight = 0.4
-  const postsPerDayWeight = 0.35
-  const interactionsWeight = 0.25
-
-  const followerScore = Math.log10(user.followers + 1) * 10
-  const postsScore = user.postsPerDay * 10
-  const interactionsScore = Math.log10(user.avgInteractions + 1) * 10
-
-  return (
-    followerScore * followerWeight +
-    postsScore * postsPerDayWeight +
-    interactionsScore * interactionsWeight
-  )
 }
 
 async function analyzeAntfuNetwork(): Promise<UserMetrics[]> {
@@ -234,15 +273,9 @@ async function analyzeAntfuNetwork(): Promise<UserMetrics[]> {
       }
     }
 
-    const rankedUsers = Array.from(users.values())
-      .map(user => ({
-        ...user,
-        activityScore: calculateActivityScore(user)
-      }))
-      .sort((a, b) => (b.activityScore || 0) - (a.activityScore || 0))
+    return Array.from(users.values())
+      .sort((a, b) => (b.score || 0) - (a.score || 0))
       .slice(0, 150)
-
-    return rankedUsers
   } catch (error) {
     console.error('Error analyzing network:', error)
     throw error
@@ -255,7 +288,6 @@ async function updateBlueskyList(users: UserMetrics[]): Promise<void> {
   try {
     console.log('Updating Bluesky list...')
 
-    // First, try to find existing list
     const existingLists = await agent.app.bsky.graph.getLists({
       actor: process.env.BLUESKY_USERNAME!
     })
