@@ -1,7 +1,5 @@
 # Bluesky Starter Pack antfu.me
 
-[https://github.com/username/bluesky-starter-pack-antfu.me](https://github.com/username/bluesky-starter-pack-antfu.me)
-
 A Nitro-powered server that generates and maintains a curated starter pack of the top 150 tech influencers from @antfu.me's Bluesky network. The server analyzes and ranks users based on follower counts, posting frequency, and engagement rates.
 
 ## 🌟 Features
