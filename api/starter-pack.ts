@@ -1,6 +1,5 @@
 import { defineEventHandler } from 'h3'
 import { AtpAgent } from '@atproto/api'
-import { AppBskyGraphList, ComAtprotoRepoCreateRecord } from '@atproto/api'
 import { CronJob } from 'cron'
 
 // Types
@@ -85,7 +84,7 @@ async function fetchAllFollows(handle: string): Promise<Set<string>> {
   try {
     do {
       const response = await withRetry(async () =>
-        agent!.api.app.bsky.graph.getFollows({
+        agent!.app.bsky.graph.getFollows({
           actor: handle,
           limit: 100,
           cursor
@@ -112,12 +111,12 @@ async function analyzeUser(handle: string): Promise<UserMetrics | null> {
   try {
     const [profile, posts] = await Promise.all([
       withRetry(async () =>
-        agent!.api.app.bsky.actor.getProfile({
+        agent!.app.bsky.actor.getProfile({
           actor: handle
         })
       ),
       withRetry(async () =>
-        agent!.api.app.bsky.feed.getAuthorFeed({
+        agent!.app.bsky.feed.getAuthorFeed({
           actor: handle,
           limit: 50
         })
@@ -257,7 +256,7 @@ async function updateBlueskyList(users: UserMetrics[]): Promise<void> {
     console.log('Updating Bluesky list...')
 
     // First, try to find existing list
-    const existingLists = await agent.api.app.bsky.graph.getLists({
+    const existingLists = await agent.app.bsky.graph.getLists({
       actor: process.env.BLUESKY_USERNAME!
     })
 
@@ -274,7 +273,7 @@ async function updateBlueskyList(users: UserMetrics[]): Promise<void> {
 
     if (existingList) {
       console.log('Updating existing list...')
-      const result = await agent.api.com.atproto.repo.putRecord({
+      const result = await agent.com.atproto.repo.putRecord({
         repo: agent.session?.did!,
         collection: 'app.bsky.graph.list',
         rkey: existingList.uri.split('/').pop()!,
@@ -284,7 +283,7 @@ async function updateBlueskyList(users: UserMetrics[]): Promise<void> {
       listCid = result.data.cid
     } else {
       console.log('Creating new list...')
-      const result = await agent.api.com.atproto.repo.createRecord({
+      const result = await agent.com.atproto.repo.createRecord({
         repo: agent.session?.did!,
         collection: 'app.bsky.graph.list',
         record: listData
@@ -298,7 +297,7 @@ async function updateBlueskyList(users: UserMetrics[]): Promise<void> {
     let cursor: string | undefined
 
     do {
-      const members = await agent.api.app.bsky.graph.getList({
+      const members = await agent.app.bsky.graph.getList({
         list: listUri,
         cursor
       })
@@ -319,12 +318,12 @@ async function updateBlueskyList(users: UserMetrics[]): Promise<void> {
 
       for (const user of batch) {
         try {
-          const profile = await agent.api.app.bsky.actor.getProfile({
+          const profile = await agent.app.bsky.actor.getProfile({
             actor: user.handle
           })
 
           if (!currentMembers.has(profile.data.did)) {
-            await agent.api.com.atproto.repo.createRecord({
+            await agent.com.atproto.repo.createRecord({
               repo: agent.session?.did!,
               collection: 'app.bsky.graph.listitem',
               record: {
