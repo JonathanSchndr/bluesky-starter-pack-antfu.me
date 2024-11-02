@@ -1,0 +1,20 @@
+{
+  "name": "bluesky-starter-pack-antfu.me",
+  "description": "Top 150 most active and influential users followed by @antfu.me",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "nitro dev",
+    "build": "nitro build",
+    "start": "node .output/server/index.mjs"
+  },
+  "dependencies": {
+    "@atproto/api": "^0.13.14",
+    "cron": "^3.1.8",
+    "h3": "^1.13.0",
+    "nitropack": "^2.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.8.6"
+  }
+}
