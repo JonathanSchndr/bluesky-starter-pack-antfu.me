@@ -1,5 +1,7 @@
 # Bluesky Starter Pack antfu.me
 
+**Important:** It is currently a list and not a starter pack, as this has not yet been implemented in the offcial api. This will be added as soon as it is available. However, the functionality of the list will remain the same. The list is available here: https://bsky.app/profile/jonathanschndr.de/lists/3l7ykssg2522z
+
 A Nitro-powered server that generates and maintains a curated starter pack of the top 150 tech influencers from @antfu.me's Bluesky network. The server analyzes and ranks users based on follower counts, posting frequency, and engagement rates.
 
 ## 🌟 Features
